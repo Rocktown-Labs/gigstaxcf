@@ -1,0 +1,31 @@
+// Better-T-Stack project metadata
+//
+// Keep this file to use the `add` command.
+// Add addons: bunx create-better-t-stack@latest add
+//
+// Docs: https://better-t-stack.dev/docs
+// Stack Builder: https://better-t-stack.dev/new
+
+{
+  "$schema": "https://r2.better-t-stack.dev/schema.json",
+  "version": "3.44.3",
+  "createdAt": "2026-10-05T19:37:02.165Z",
+  "reproducibleCommand": "bun create better-t-stack@latest gigstaxcf --frontend tanstack-start native-uniwind --backend hono --runtime workers --database postgres --orm drizzle --api none --auth better-auth --payments polar --addons axiom lefthook oxlint skills turborepo ultracite --examples none --db-setup planetscale --web-deploy cloudflare --server-deploy cloudflare --git --package-manager bun --install",
+  "dbSetupOptions": {
+    "mode": "alchemy",
+  },
+  "database": "postgres",
+  "orm": "drizzle",
+  "backend": "hono",
+  "runtime": "workers",
+  "frontend": ["tanstack-start", "native-uniwind"],
+  "addons": ["axiom", "lefthook", "oxlint", "skills", "turborepo", "ultracite"],
+  "examples": [],
+  "auth": "better-auth",
+  "payments": "polar",
+  "packageManager": "bun",
+  "dbSetup": "planetscale",
+  "api": "none",
+  "webDeploy": "cloudflare",
+  "serverDeploy": "cloudflare",
+}

@@ -1,0 +1,7 @@
+{
+  "extends": "@gigstaxcf/config/tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "strictNullChecks": true
+  }
+}
