@@ -35,6 +35,8 @@ export const databaseBindings = {
 
 export const databaseProviders = Layer.mergeAll(Planetscale.providers());
 
+export const mediaBucket = Cloudflare.R2.Bucket("media");
+
 export const observability = Effect.gen(function* observability() {
   const { stage } = yield* Alchemy.Stack;
   const datasetName = `gigstaxcf-${stage}-logs`;
@@ -88,11 +90,35 @@ export const server = Cloudflare.Worker("server", {
   },
   env: {
     ...databaseBindings,
+    ADMIN_EMAILS: Config.String("ADMIN_EMAILS").pipe(Config.withDefault("")),
     BETTER_AUTH_SECRET: Config.Redacted("BETTER_AUTH_SECRET"),
     BETTER_AUTH_URL: Cloudflare.Worker.URL,
     CORS_ORIGIN: Config.String("CORS_ORIGIN"),
+    GOOGLE_GENERATIVE_AI_API_KEY: Config.String(
+      "GOOGLE_GENERATIVE_AI_API_KEY"
+    ).pipe(Config.withDefault("")),
+    MEDIA: mediaBucket,
+    NEXT_PUBLIC_RADAR_PUBLISHABLE_KEY: Config.String(
+      "NEXT_PUBLIC_RADAR_PUBLISHABLE_KEY"
+    ).pipe(Config.withDefault("")),
     POLAR_ACCESS_TOKEN: Config.Redacted("POLAR_ACCESS_TOKEN"),
     POLAR_SUCCESS_URL: Config.String("POLAR_SUCCESS_URL"),
+    RADAR_SERVER_KEY: Config.String("RADAR_SERVER_KEY").pipe(
+      Config.withDefault("")
+    ),
+    RESEND_API_KEY: Config.String("RESEND_API_KEY").pipe(
+      Config.withDefault("")
+    ),
+    RESEND_FROM_LIFECYCLE: Config.String("RESEND_FROM_LIFECYCLE").pipe(
+      Config.withDefault("")
+    ),
+    RESEND_FROM_TRANSACTIONAL: Config.String("RESEND_FROM_TRANSACTIONAL").pipe(
+      Config.withDefault("")
+    ),
+    RESEND_WEBHOOK_SECRET: Config.String("RESEND_WEBHOOK_SECRET").pipe(
+      Config.withDefault("")
+    ),
+    SITE_URL: Config.String("SITE_URL").pipe(Config.withDefault("")),
     ...observabilityBindings,
   },
   main: "../../apps/server/src/index.ts",
@@ -122,6 +148,9 @@ export default Alchemy.Stack(
       },
       env: {
         ...observabilityBindings,
+        VITE_RADAR_PUBLISHABLE_KEY: Config.String(
+          "VITE_RADAR_PUBLISHABLE_KEY"
+        ).pipe(Config.withDefault("")),
         VITE_SERVER_URL: serverWorker.url.as<string>(),
       },
       rootDir: "../../apps/web",

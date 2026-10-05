@@ -1,0 +1,26 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="512"
+  height="512"
+  viewBox="0 0 512 512"
+  role="img"
+  aria-label="GigStax icon"
+>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Titan+One&amp;display=swap");
+    .mark {
+      font-family: "Titan One", sans-serif;
+      font-style: normal;
+      font-weight: 400;
+      font-size: 262px;
+      text-anchor: middle;
+      dominant-baseline: central;
+      letter-spacing: -10px;
+    }
+  </style>
+
+  <rect x="32" y="32" width="448" height="448" rx="96" fill="#050505" />
+  <text class="mark" x="256" y="276">
+    <tspan fill="#FFFFFF">G</tspan><tspan fill="#39D000">S</tspan>
+  </text>
+</svg>

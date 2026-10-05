@@ -39,6 +39,8 @@ export default defineConfig({
     "jsx-a11y/no-noninteractive-element-interactions": "warn",
     "jsx-a11y/prefer-tag-over-role": "warn",
     "max-statements": "warn",
+    // Sequential awaits in email/stub batch processing are intentional
+    "no-await-in-loop": "warn",
     "no-inline-comments": "warn",
     "no-negated-condition": "warn",
     "no-nested-ternary": "warn",
@@ -57,6 +59,9 @@ export default defineConfig({
     "typescript/no-explicit-any": "warn",
     "typescript/no-non-null-assertion": "warn",
     "typescript/triple-slash-reference": "warn",
+    // Method signatures on client interfaces keep third-party SDK classes
+    // assignable (property signatures are strictly contravariant)
+    "typescript/method-signature-style": "warn",
     "unicorn/catch-error-name": "off",
     "unicorn/consistent-function-scoping": "warn",
     "unicorn/no-array-sort": "warn",

@@ -7,20 +7,39 @@ import { betterAuth } from "better-auth";
 
 import { createPolarClient } from "./lib/payments";
 
+export interface PolarCheckoutProduct {
+  productId: string;
+  slug: string;
+}
+
+export interface SendResetPasswordArgs {
+  url: string;
+  user: {
+    email: string;
+    name: string;
+  };
+}
+
 export interface AuthConfig {
   BETTER_AUTH_URL: string;
   BETTER_AUTH_SECRET: string;
   CORS_ORIGIN: string;
   POLAR_ACCESS_TOKEN: string;
   POLAR_SUCCESS_URL: string;
+  polarProducts?: PolarCheckoutProduct[];
+  sendResetPasswordEmail?: (args: SendResetPasswordArgs) => Promise<void>;
 }
 
-export function createAuth(
+export interface CreateAuthOptions {
+  database: Database;
+  desktopOrigins?: readonly string[];
+}
+
+export const createAuth = (
   env: AuthConfig,
-  database: Database,
-  desktopOrigins: readonly string[] = []
-) {
-  return betterAuth({
+  { database, desktopOrigins = [] }: CreateAuthOptions
+) =>
+  betterAuth({
     advanced: {
       defaultCookieAttributes: {
         httpOnly: true,
@@ -33,7 +52,10 @@ export function createAuth(
       provider: "pg",
       schema,
     }),
-    emailAndPassword: { enabled: true },
+    emailAndPassword: {
+      enabled: true,
+      sendResetPasswordEmail: env.sendResetPasswordEmail,
+    },
     plugins: [
       polar({
         client: createPolarClient(env),
@@ -41,7 +63,7 @@ export function createAuth(
         use: [
           checkout({
             authenticatedUsersOnly: true,
-            products: [{ productId: "your-product-id", slug: "pro" }],
+            products: env.polarProducts ?? [],
             successUrl: env.POLAR_SUCCESS_URL,
           }),
           portal(),
@@ -58,6 +80,5 @@ export function createAuth(
       "http://localhost:8081",
     ],
   });
-}
 
 export type Session = ReturnType<typeof createAuth>["$Infer"]["Session"];

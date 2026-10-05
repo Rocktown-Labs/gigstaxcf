@@ -12,14 +12,14 @@ import defaultHook from "stoker/openapi/default-hook";
 
 import { ENV } from "./env.server";
 import { apiRoutes } from "./routes";
-import { createAuth } from "./services";
+import { getAuth } from "./services";
 
 initLogger({
   env: { service: "gigstaxcf-server" },
 });
 
 const identifyUser = createAuthMiddleware(
-  (await createAuth()) as BetterAuthInstance,
+  (await getAuth()) as BetterAuthInstance,
   {
     exclude: ["/api/auth/**"],
     maskEmail: true,
@@ -45,7 +45,7 @@ app.use(
 );
 
 app.on(["POST", "GET"], "/api/auth/*", async (c) => {
-  const auth = await createAuth();
+  const auth = await getAuth();
   return auth.handler(c.req.raw);
 });
 

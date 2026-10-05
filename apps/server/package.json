@@ -9,13 +9,26 @@
     "env:generate": "varlock codegen"
   },
   "dependencies": {
+    "@ai-sdk/google": "^4.0.0",
     "@gigstaxcf/auth": "workspace:*",
     "@gigstaxcf/db": "workspace:*",
     "@hono/zod-openapi": "^1.6.3",
+    "@polar-sh/sdk": "^0.43.1",
+    "@react-email/components": "^1.0.12",
+    "@react-email/render": "^2.1.0",
+    "ai": "^7.0.0",
     "better-auth": "catalog:",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "drizzle-orm": "catalog:",
     "evlog": "catalog:",
     "hono": "^4.13.7",
+    "radar-sdk-js": "^5.0.0",
+    "react": "^19.2.8",
+    "resend": "^6.9.2",
     "stoker": "^2.0.1",
+    "svix": "^1.86.0",
+    "tailwind-merge": "^3.3.1",
     "varlock": "catalog:",
     "zod": "catalog:"
   },
@@ -24,6 +37,7 @@
     "@gigstaxcf/config": "workspace:*",
     "@gigstaxcf/infra": "workspace:*",
     "@types/node": "catalog:",
+    "@types/react": "^19.3.0",
     "tsdown": "^0.23.0",
     "typescript": "^6.0.3"
   }
