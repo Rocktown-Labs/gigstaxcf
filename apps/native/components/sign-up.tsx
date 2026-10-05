@@ -10,19 +10,33 @@ import {
   useToast,
 } from "heroui-native";
 import { useRef } from "react";
-import { Text, TextInput, View } from "react-native";
-import z from "zod";
+import type { TextInput } from "react-native";
+import { Text, View } from "react-native";
+import { z } from "zod";
 
 import { authClient } from "@/lib/auth-client";
 
 const signUpSchema = z.object({
-  name: z.string().trim().min(1, "Name is required").min(2, "Name must be at least 2 characters"),
-  email: z.string().trim().min(1, "Email is required").email("Enter a valid email address"),
-  password: z.string().min(1, "Password is required").min(8, "Use at least 8 characters"),
+  email: z
+    .string()
+    .trim()
+    .min(1, "Email is required")
+    .email("Enter a valid email address"),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Name is required")
+    .min(2, "Name must be at least 2 characters"),
+  password: z
+    .string()
+    .min(1, "Password is required")
+    .min(8, "Use at least 8 characters"),
 });
 
 function getErrorMessage(error: unknown): string | null {
-  if (!error) return null;
+  if (!error) {
+    return null;
+  }
 
   if (typeof error === "string") {
     return error;
@@ -55,42 +69,42 @@ export function SignUp() {
 
   const form = useForm({
     defaultValues: {
-      name: "",
       email: "",
+      name: "",
       password: "",
-    },
-    validators: {
-      onSubmit: signUpSchema,
     },
     onSubmit: async ({ value, formApi }) => {
       await authClient.signUp.email(
         {
-          name: value.name.trim(),
           email: value.email.trim(),
+          name: value.name.trim(),
           password: value.password,
         },
         {
           onError(error) {
             toast.show({
-              variant: "danger",
               label: error.error?.message || "Failed to sign up",
+              variant: "danger",
             });
           },
           onSuccess() {
             formApi.reset();
             toast.show({
-              variant: "success",
               label: "Account created successfully",
+              variant: "success",
             });
           },
-        },
+        }
       );
+    },
+    validators: {
+      onSubmit: signUpSchema,
     },
   });
 
   return (
-    <Surface variant="secondary" className="p-4 rounded-lg">
-      <Text className="text-foreground font-medium mb-4">Create Account</Text>
+    <Surface variant="secondary" className="rounded-lg p-4">
+      <Text className="text-foreground mb-4 font-medium">Create Account</Text>
 
       <form.Subscribe
         selector={(state) => ({
@@ -173,7 +187,11 @@ export function SignUp() {
                   )}
                 </form.Field>
 
-                <Button onPress={form.handleSubmit} isDisabled={isSubmitting} className="mt-1">
+                <Button
+                  onPress={form.handleSubmit}
+                  isDisabled={isSubmitting}
+                  className="mt-1"
+                >
                   {isSubmitting ? (
                     <Spinner size="sm" color="default" />
                   ) : (

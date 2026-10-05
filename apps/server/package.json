@@ -11,9 +11,11 @@
   "dependencies": {
     "@gigstaxcf/auth": "workspace:*",
     "@gigstaxcf/db": "workspace:*",
+    "@hono/zod-openapi": "^1.6.3",
     "better-auth": "catalog:",
     "evlog": "catalog:",
     "hono": "^4.13.7",
+    "stoker": "^2.0.1",
     "varlock": "catalog:",
     "zod": "catalog:"
   },

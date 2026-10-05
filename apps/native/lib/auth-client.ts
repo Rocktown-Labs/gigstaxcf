@@ -12,13 +12,13 @@ export const authClient = createAuthClient({
   plugins: [
     // Infer Polar endpoints without importing its browser checkout embed.
     {
-      id: "polar-client",
       $InferServerPlugin: {} as ReturnType<typeof polar>,
+      id: "polar-client",
     } satisfies BetterAuthClientPlugin,
     expoClient({
       scheme: Constants.expoConfig?.scheme as string,
-      storagePrefix: Constants.expoConfig?.scheme as string,
       storage: SecureStore,
+      storagePrefix: Constants.expoConfig?.scheme as string,
     }),
   ],
 });

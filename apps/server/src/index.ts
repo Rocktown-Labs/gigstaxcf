@@ -1,44 +1,59 @@
+import { OpenAPIHono } from "@hono/zod-openapi";
 import { initLogger } from "evlog";
 import { createAxiomDrain } from "evlog/axiom";
-import { createAuthMiddleware, type BetterAuthInstance } from "evlog/better-auth";
-import { evlog, type EvlogVariables } from "evlog/hono";
-import { Hono } from "hono";
+import { createAuthMiddleware } from "evlog/better-auth";
+import type { BetterAuthInstance } from "evlog/better-auth";
+import { evlog } from "evlog/hono";
+import type { EvlogVariables } from "evlog/hono";
 import { cors } from "hono/cors";
+import notFound from "stoker/middlewares/not-found";
+import onError from "stoker/middlewares/on-error";
+import defaultHook from "stoker/openapi/default-hook";
 
 import { ENV } from "./env.server";
+import { apiRoutes } from "./routes";
 import { createAuth } from "./services";
 
 initLogger({
   env: { service: "gigstaxcf-server" },
 });
 
-const identifyUser = createAuthMiddleware((await createAuth()) as BetterAuthInstance, {
-  exclude: ["/api/auth/**"],
-  maskEmail: true,
-});
+const identifyUser = createAuthMiddleware(
+  (await createAuth()) as BetterAuthInstance,
+  {
+    exclude: ["/api/auth/**"],
+    maskEmail: true,
+  }
+);
 
-const app = new Hono<EvlogVariables>();
+const app = new OpenAPIHono<EvlogVariables>({ defaultHook });
 
 app.use(evlog({ drain: createAxiomDrain() }));
 app.use("*", async (c, next) => {
   await identifyUser(c.get("log"), c.req.raw.headers, c.req.path);
-  await next();
+  return next();
 });
 
 app.use(
   "/*",
   cors({
-    origin: ENV.CORS_ORIGIN,
-    allowMethods: ["GET", "POST", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
+    allowMethods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
-  }),
+    origin: ENV.CORS_ORIGIN,
+  })
 );
 
-app.on(["POST", "GET"], "/api/auth/*", async (c) => (await createAuth()).handler(c.req.raw));
+app.on(["POST", "GET"], "/api/auth/*", async (c) => {
+  const auth = await createAuth();
+  return auth.handler(c.req.raw);
+});
 
 const nativeAppUrl = "gigstaxcf://";
-const allowedNativeProtocols = new Set(["exp:", new URL(nativeAppUrl).protocol]);
+const allowedNativeProtocols = new Set([
+  "exp:",
+  new URL(nativeAppUrl).protocol,
+]);
 
 app.get("/polar/success", (c) => {
   const requestUrl = new URL(c.req.url);
@@ -58,8 +73,19 @@ app.get("/polar/success", (c) => {
   return c.redirect(redirectUrl.toString(), 302);
 });
 
-app.get("/", (c) => {
-  return c.text("OK");
+app.get("/", (c) => c.text("OK"));
+
+app.route("/api", apiRoutes);
+
+app.doc("/openapi", {
+  info: {
+    title: "Gigstax API",
+    version: "0.1.0",
+  },
+  openapi: "3.1.0",
 });
+
+app.notFound(notFound);
+app.onError(onError);
 
 export default app;

@@ -1,5 +1,6 @@
 import { createAuth as createConfiguredAuth } from "@gigstaxcf/auth";
-import { type Database, createDb } from "@gigstaxcf/db";
+import { createDb } from "@gigstaxcf/db";
+import type { Database } from "@gigstaxcf/db";
 
 import { ENV } from "./env.server";
 

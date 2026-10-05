@@ -4,9 +4,6 @@ import { initWorkersLogger, withEvlog } from "evlog/workers";
 
 initWorkersLogger({ env: { service: "gigstaxcf-web" } });
 
-export default withEvlog(
-  async (request) => {
-    return handler.fetch(request);
-  },
-  { drain: createAxiomDrain() },
-);
+export default withEvlog((request) => handler.fetch(request), {
+  drain: createAxiomDrain(),
+});

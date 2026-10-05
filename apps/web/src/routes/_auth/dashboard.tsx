@@ -10,7 +10,8 @@ export const Route = createFileRoute("/_auth/dashboard")({
 function RouteComponent() {
   const { session, customerState } = Route.useRouteContext();
 
-  const hasProSubscription = (customerState?.activeSubscriptions?.length ?? 0) > 0;
+  const hasProSubscription =
+    (customerState?.activeSubscriptions?.length ?? 0) > 0;
 
   return (
     <div>

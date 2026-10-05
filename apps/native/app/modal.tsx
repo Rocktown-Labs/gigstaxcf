@@ -14,14 +14,20 @@ function Modal() {
 
   return (
     <Container>
-      <View className="flex-1 justify-center items-center p-4">
-        <Surface variant="secondary" className="p-5 w-full max-w-sm rounded-lg">
+      <View className="flex-1 items-center justify-center p-4">
+        <Surface variant="secondary" className="w-full max-w-sm rounded-lg p-5">
           <View className="items-center">
-            <View className="w-12 h-12 bg-accent rounded-lg items-center justify-center mb-3">
-              <Ionicons name="checkmark" size={24} color={accentForegroundColor} />
+            <View className="bg-accent mb-3 h-12 w-12 items-center justify-center rounded-lg">
+              <Ionicons
+                name="checkmark"
+                size={24}
+                color={accentForegroundColor}
+              />
             </View>
-            <Text className="text-foreground font-medium text-lg mb-1">Modal Screen</Text>
-            <Text className="text-muted text-sm text-center mb-4">
+            <Text className="text-foreground mb-1 text-lg font-medium">
+              Modal Screen
+            </Text>
+            <Text className="text-muted mb-4 text-center text-sm">
               This is an example modal screen for dialogs and confirmations.
             </Text>
           </View>
