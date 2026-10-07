@@ -6,6 +6,7 @@ import createMessageObjectSchema from "stoker/openapi/schemas/create-message-obj
 
 import { adminRoutes } from "./admin";
 import { analyzeRoutes } from "./analyze";
+import { billingRoutes } from "./billing";
 import { bulkAnalyzeRoutes } from "./bulk-analyze";
 import { cronRoutes } from "./cron";
 import { dashboardRoutes } from "./dashboard";
@@ -46,6 +47,7 @@ export const apiRoutes = new OpenAPIHono({ defaultHook })
   .route("/", expensesRoutes)
   .route("/", entriesRoutes)
   .route("/", analyzeRoutes)
+  .route("/", billingRoutes)
   .route("/", goalsRoutes)
   .route("/", deliveriesRoutes)
   .route("/", dashboardRoutes)

@@ -88,4 +88,8 @@ app.doc("/openapi", {
 app.notFound(notFound);
 app.onError(onError);
 
+// Cloudflare Workflow hosted by this worker (bound as PROCESS_EXTRACTION
+// via Alchemy; driven by apps/server/src/lib/services/bulk-extraction.ts).
+export { ProcessExtractionWorkflow } from "@/lib/workflows/process-extraction";
+
 export default app;

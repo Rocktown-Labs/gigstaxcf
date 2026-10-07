@@ -1,4 +1,6 @@
 import { aiExtractions, mediaAssets } from "@gigstaxcf/db/schema";
+import { WorkflowEntrypoint } from "cloudflare:workers";
+import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 import { and, eq } from "drizzle-orm";
 
 import { db } from "@/lib/db";
@@ -20,7 +22,7 @@ import {
 } from "@/lib/services/media";
 import { trackPolarUsage } from "@/lib/services/polar-usage";
 
-interface ProcessExtractionInput {
+export interface ProcessExtractionParams {
   extractionId: number;
   userId: number;
 }
@@ -45,55 +47,94 @@ const getPrivateBlobReadToken = () =>
   serverEnv.BLOB_READ_WRITE_TOKEN ||
   null;
 
-export async function processExtractionWorkflow(input: ProcessExtractionInput) {
-  await markExtractionAsProcessing(input);
+/**
+ * Durable extraction pipeline, migrated from the Vercel `workflow` package
+ * to Cloudflare Workflows. Steps retry independently; a failed analysis
+ * after retries records the failure in the DB (matching the original
+ * semantics) instead of erroring the instance forever.
+ */
+export class ProcessExtractionWorkflow extends WorkflowEntrypoint<
+  Env,
+  ProcessExtractionParams
+> {
+  // Workflow entrypoint: steps run via module-level helpers, so `this`
+  // is intentionally unused (kept non-static for the Workflows runtime).
+  // oxlint-disable-next-line class-methods-use-this
+  async run(event: WorkflowEvent<ProcessExtractionParams>, step: WorkflowStep) {
+    const input = event.payload;
 
-  try {
-    const context = await loadExtractionContext(input);
-    const analyzed = await analyzeExtractionMedia(context);
-    await recordExtractionUsage({
-      completionTokens: analyzed.usage.completionTokens,
-      endpoint: "/api/entries/bulk-analyze",
-      feature: "bulk_image_analysis",
-      model: ANALYZE_MODEL,
-      promptTokens: analyzed.usage.promptTokens,
-      provider: ANALYZE_PROVIDER,
-      status: "success",
-      totalTokens: analyzed.usage.totalTokens,
-      userId: input.userId,
-    });
-    await markExtractionAsCompleted({
-      extractionId: input.extractionId,
-      model: ANALYZE_MODEL,
-      parsedPayload: analyzed.normalized,
-      promptVersion: ANALYZE_PROMPT_VERSION,
-      provider: ANALYZE_PROVIDER,
-      rawResponse: analyzed.rawResponse,
-    });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Extraction failed unexpectedly";
-    await recordExtractionUsage({
-      endpoint: "/api/entries/bulk-analyze",
-      feature: "bulk_image_analysis",
-      metadata: {
-        error: message,
-        extractionId: input.extractionId,
-      },
-      model: ANALYZE_MODEL,
-      provider: ANALYZE_PROVIDER,
-      status: "failed",
-      userId: input.userId,
-    });
-    await markExtractionAsFailed({
-      errorMessage: message,
-      extractionId: input.extractionId,
-      userId: input.userId,
-    });
+    await step.do("mark-processing", () => markExtractionAsProcessing(input));
+
+    try {
+      const context = await step.do(
+        "load-context",
+        { retries: { backoff: "exponential", delay: 5, limit: 3 } },
+        () => loadExtractionContext(input)
+      );
+
+      const analyzed = await step.do(
+        "analyze-media",
+        { retries: { backoff: "exponential", delay: 10, limit: 3 } },
+        () => analyzeExtractionMedia(context)
+      );
+
+      await step.do("record-usage", () =>
+        recordExtractionUsage({
+          completionTokens: analyzed.usage.completionTokens,
+          endpoint: "/api/entries/bulk-analyze",
+          feature: "bulk_image_analysis",
+          model: ANALYZE_MODEL,
+          promptTokens: analyzed.usage.promptTokens,
+          provider: ANALYZE_PROVIDER,
+          status: "success",
+          totalTokens: analyzed.usage.totalTokens,
+          userId: input.userId,
+        })
+      );
+
+      await step.do("mark-completed", () =>
+        markExtractionAsCompleted({
+          extractionId: input.extractionId,
+          model: ANALYZE_MODEL,
+          parsedPayload: analyzed.normalized,
+          promptVersion: ANALYZE_PROMPT_VERSION,
+          provider: ANALYZE_PROVIDER,
+          rawResponse: analyzed.rawResponse,
+        })
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Extraction failed unexpectedly";
+
+      await step.do("record-failed-usage", () =>
+        recordExtractionUsage({
+          endpoint: "/api/entries/bulk-analyze",
+          feature: "bulk_image_analysis",
+          metadata: {
+            error: message,
+            extractionId: input.extractionId,
+          },
+          model: ANALYZE_MODEL,
+          provider: ANALYZE_PROVIDER,
+          status: "failed",
+          userId: input.userId,
+        })
+      );
+
+      await step.do("mark-failed", () =>
+        markExtractionAsFailed({
+          errorMessage: message,
+          extractionId: input.extractionId,
+          userId: input.userId,
+        })
+      );
+    }
   }
 }
 
-async function markExtractionAsProcessing(input: ProcessExtractionInput) {
+async function markExtractionAsProcessing(input: ProcessExtractionParams) {
   const [row] = await db
     .update(aiExtractions)
     .set({
@@ -116,7 +157,7 @@ async function markExtractionAsProcessing(input: ProcessExtractionInput) {
 }
 
 async function loadExtractionContext(
-  input: ProcessExtractionInput
+  input: ProcessExtractionParams
 ): Promise<ExtractionMediaContext> {
   const [row] = await db
     .select({

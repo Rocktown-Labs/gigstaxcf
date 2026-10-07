@@ -1,6 +1,7 @@
 import { aiExtractions, mediaAssets } from "@gigstaxcf/db/schema";
 import { and, desc, eq, inArray } from "drizzle-orm";
 
+import { ENV } from "@/env.server";
 import { db } from "@/lib/db";
 import type { NormalizedExtractionPayload } from "@/lib/services/extraction";
 import {
@@ -13,7 +14,6 @@ import {
   resolveMediaAssetUrl,
   uploadFileToBlob,
 } from "@/lib/services/media";
-import { processExtractionWorkflow } from "@/lib/workflows/process-extraction";
 
 export interface BulkQueueItemDto {
   draftId: string;
@@ -80,10 +80,18 @@ export async function createAndQueueExtractionFromFile(args: {
     throw new Error("Failed to create extraction queue item");
   }
 
-  await processExtractionWorkflow({
-    extractionId: extraction.id,
-    userId: args.userId,
+  const instance = await ENV.PROCESS_EXTRACTION.create({
+    id: `extraction-${extraction.id}`,
+    params: {
+      extractionId: extraction.id,
+      userId: args.userId,
+    },
   });
+
+  await db
+    .update(aiExtractions)
+    .set({ workflowRunId: instance.id })
+    .where(eq(aiExtractions.id, extraction.id));
 
   const filename = args.file.name || `upload-${extraction.id}.png`;
 
@@ -194,10 +202,18 @@ export async function retryBulkExtraction(args: {
     })
     .where(eq(aiExtractions.id, args.extractionId));
 
-  await processExtractionWorkflow({
-    extractionId: args.extractionId,
-    userId: args.userId,
+  const instance = await ENV.PROCESS_EXTRACTION.create({
+    id: `extraction-${args.extractionId}-retry-${Date.now()}`,
+    params: {
+      extractionId: args.extractionId,
+      userId: args.userId,
+    },
   });
 
-  return { extractionId: args.extractionId, workflowRunId: null };
+  await db
+    .update(aiExtractions)
+    .set({ workflowRunId: instance.id })
+    .where(eq(aiExtractions.id, args.extractionId));
+
+  return { extractionId: args.extractionId, workflowRunId: instance.id };
 }

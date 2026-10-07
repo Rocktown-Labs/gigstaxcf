@@ -37,6 +37,13 @@ export const databaseProviders = Layer.mergeAll(Planetscale.providers());
 
 export const mediaBucket = Cloudflare.R2.Bucket("media");
 
+// Cloudflare Workflow hosted by the server worker (see
+// apps/server/src/lib/workflows/process-extraction.ts).
+export const processExtractionWorkflow = Cloudflare.Workflow(
+  "process-extraction",
+  { className: "ProcessExtractionWorkflow" }
+);
+
 export const observability = Effect.gen(function* observability() {
   const { stage } = yield* Alchemy.Stack;
   const datasetName = `gigstaxcf-${stage}-logs`;
@@ -103,6 +110,7 @@ export const server = Cloudflare.Worker("server", {
     ).pipe(Config.withDefault("")),
     POLAR_ACCESS_TOKEN: Config.Redacted("POLAR_ACCESS_TOKEN"),
     POLAR_SUCCESS_URL: Config.String("POLAR_SUCCESS_URL"),
+    PROCESS_EXTRACTION: processExtractionWorkflow,
     RADAR_SERVER_KEY: Config.String("RADAR_SERVER_KEY").pipe(
       Config.withDefault("")
     ),

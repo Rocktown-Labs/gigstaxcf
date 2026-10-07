@@ -34,135 +34,44 @@ const dashboardSearchSchema = z.object({
   view: z.enum(["gross", "net"]).optional(),
 });
 
-const HEX_COLOR_REGEX = /^#(?<hex>[0-9a-fA-F]{6})$/u;
-const NEAR_BLACK_RGB_THRESHOLD = 40;
 const NEAR_BLACK_REPLACEMENT_COLOR = "#3f3f46";
-const RECENT_PAGE_SIZE = 5;
 
-const parseHexColor = (value: string) => {
-  if (!HEX_COLOR_REGEX.test(value)) {
-    return null;
-  }
-
-  return {
-    blue: Number.parseInt(value.slice(5, 7), 16),
-    green: Number.parseInt(value.slice(3, 5), 16),
-    red: Number.parseInt(value.slice(1, 3), 16),
-  };
-};
-
-const isNearBlack = (colorHex: string) => {
-  const parsed = parseHexColor(colorHex);
-  if (!parsed) {
-    return false;
-  }
-
-  return (
-    parsed.red <= NEAR_BLACK_RGB_THRESHOLD &&
-    parsed.green <= NEAR_BLACK_RGB_THRESHOLD &&
-    parsed.blue <= NEAR_BLACK_RGB_THRESHOLD
-  );
-};
-
-const getChartColor = (colorHex: string) =>
-  isNearBlack(colorHex) ? NEAR_BLACK_REPLACEMENT_COLOR : colorHex;
-
-interface DashboardEntry {
-  id: number;
-  occurredAt?: string;
-  occurred_at?: string;
-  distanceMiles?: number | string | null;
-  distance_miles?: number | string | null;
-  effectiveTip?: number | string;
-  effective_tip?: number | string;
-  effectiveTotal?: number | string;
-  effective_total?: number | string;
-  platformSlug?: string;
-  platform_slug?: string;
-  platformDisplayName?: string;
-  platform_display_name?: string;
-  platformColorHex?: string;
-  platform_color_hex?: string;
-}
-
-interface EntriesResponse {
-  entries?: DashboardEntry[];
-  pagination?: { totalItems: number };
-  summary?: {
-    totalLogs: number;
+interface DashboardApiResult {
+  monthlyPlatformBreakdown: {
+    colorHex: string;
+    name: string;
+    value: number;
+  }[];
+  monthlyPlatformTotal: number;
+  platformBreakdown: {
+    colorHex: string;
+    name: string;
+    value: number;
+  }[];
+  recentEntries: {
+    distanceMiles: number;
+    effectiveTip: number;
+    effectiveTotal: number;
+    id: number;
+    occurredAt: string;
+    platformDisplayName: string;
+    platformSlug: string;
+  }[];
+  stats: {
+    totalDeliveries: number;
+    totalEarnings: number;
+    totalExpenses: number;
     totalMiles: number;
-    totalPayout: number;
     totalTips: number;
   };
-}
-
-interface ExpensesSummaryResponse {
-  summary?: { totalExpenses: number };
-}
-
-const CHART_FALLBACK_COLOR = "#2563eb";
-
-const formatPlatformName = (slug: string) =>
-  slug.replaceAll("_", " ").replaceAll(/\b\w/gu, (char) => char.toUpperCase());
-
-const toNumber = (value: unknown) => {
-  const parsed = Number(value ?? 0);
-  return Number.isFinite(parsed) ? parsed : 0;
-};
-
-const normalizePlatformColor = (value: unknown) => {
-  if (typeof value !== "string") {
-    return CHART_FALLBACK_COLOR;
-  }
-
-  const normalized = value.trim();
-  const prefixed = normalized.startsWith("#") ? normalized : `#${normalized}`;
-  if (!HEX_COLOR_REGEX.test(prefixed)) {
-    return CHART_FALLBACK_COLOR;
-  }
-
-  return prefixed.toLowerCase();
-};
-
-const createMonthKeyGetter = (timeZone: string) => {
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    month: "2-digit",
-    timeZone,
-    year: "numeric",
-  });
-
-  return (date: Date) => {
-    const parts = formatter.formatToParts(date);
-    const month = parts.find((part) => part.type === "month")?.value;
-    const year = parts.find((part) => part.type === "year")?.value;
-
-    if (!month || !year) {
-      return "";
-    }
-
-    return `${year}-${month}`;
+  user: {
+    email: string;
+    firstName: string;
+    name: string;
   };
-};
+}
 
-const resolveMonthKeyGetter = (timeZone: string | null | undefined) => {
-  const normalized = timeZone?.trim() || "UTC";
-
-  try {
-    return createMonthKeyGetter(normalized);
-  } catch {
-    return createMonthKeyGetter("UTC");
-  }
-};
-
-const getFirstName = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return "Driver";
-  }
-
-  const [firstToken] = trimmed.split(/\s+/u);
-  return firstToken || "Driver";
-};
+const RECENT_PAGE_SIZE = 5;
 
 export const Route = createFileRoute("/dashboard/")({
   component: DashboardPage,
@@ -173,121 +82,38 @@ export const Route = createFileRoute("/dashboard/")({
 });
 
 function DashboardPage() {
-  const { user } = Route.useRouteContext();
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/dashboard" });
   const isNetView = search.view === "net";
   const recentPage = search.recentPage ?? 1;
 
-  // NOTE(dashboard-api): the legacy page consumed `getDashboardData`
-  // (lib/services/dashboard.ts) on the server. There is no
-  // /api/dashboard-summary endpoint, so this port recomputes the same shape
-  // client-side from GET /api/entries?status=completed&pageSize=500 (stats +
-  // recent entries + platform breakdowns) and the /api/expenses summary
-  // (total expenses), matching what getDashboardData returned.
+  // The legacy page consumed getDashboardData server-side; this port fetches
+  // the ported aggregate (GET /api/dashboard, a 1:1 of getDashboardData)
+  // and adapts field names for the components below.
   const dashboardQuery = useQuery({
     queryFn: async () => {
-      const [entriesResponse, expensesResponse] = await Promise.all([
-        apiFetch("/api/entries?status=completed&pageSize=500"),
-        apiFetch("/api/expenses?pageSize=1"),
-      ]);
-
-      if (!entriesResponse.ok || !expensesResponse.ok) {
+      const response = await apiFetch("/api/dashboard");
+      if (!response.ok) {
         throw new Error("Failed to load dashboard data");
       }
 
-      const entriesPayload = (await entriesResponse.json()) as EntriesResponse;
-      const expensesPayload =
-        (await expensesResponse.json()) as ExpensesSummaryResponse;
-
-      const entries = entriesPayload.entries ?? [];
-      const monthKeyFor = resolveMonthKeyGetter(user.timezone);
-      const currentMonthKey = monthKeyFor(new Date());
-
-      const monthlyPlatformTotals = new Map<
-        string,
-        { colorHex: string; name: string; value: number }
-      >();
-      const recentEntries = entries.slice(0, 10).map((entry) => {
-        const effectiveTotal = toNumber(
-          entry.effectiveTotal ?? entry.effective_total
-        );
-        const effectiveTip = toNumber(
-          entry.effectiveTip ?? entry.effective_tip
-        );
-        const platformSlug =
-          entry.platformSlug || entry.platform_slug || "other";
-        const platformColorHex = normalizePlatformColor(
-          entry.platformColorHex || entry.platform_color_hex
-        );
-        const occurredAtRaw = String(
-          entry.occurredAt || entry.occurred_at || new Date().toISOString()
-        );
-        const occurredAt = new Date(occurredAtRaw);
-
-        // Mirror getDashboardData: the "This Month" breakdown only includes
-        // completed entries whose occurredAt falls in the current month
-        // (in the driver's timezone).
-        if (
-          !Number.isNaN(occurredAt.getTime()) &&
-          monthKeyFor(occurredAt) === currentMonthKey
-        ) {
-          const monthly = monthlyPlatformTotals.get(platformSlug);
-          monthlyPlatformTotals.set(platformSlug, {
-            colorHex: platformColorHex,
-            name:
-              entry.platformDisplayName ||
-              entry.platform_display_name ||
-              formatPlatformName(platformSlug),
-            value: (monthly?.value || 0) + effectiveTotal,
-          });
-        }
-
-        return {
-          distanceMiles: toNumber(
-            entry.distanceMiles || entry.distance_miles || 0
-          ),
-          effectiveTip,
-          effectiveTotal,
-          id: entry.id,
-          occurredAt: occurredAtRaw,
-          platformDisplayName:
-            entry.platformDisplayName ||
-            entry.platform_display_name ||
-            formatPlatformName(platformSlug),
-          platformSlug,
-        };
-      });
-
-      const monthlyPlatformBreakdown = [...monthlyPlatformTotals.values()]
-        .sort((left, right) => right.value - left.value)
-        .map((platform) => ({
-          ...platform,
-          chartColorHex: getChartColor(platform.colorHex),
-        }));
-      const monthlyPlatformTotal = monthlyPlatformBreakdown.reduce(
-        (sum, platform) => sum + platform.value,
-        0
-      );
-      const summary = entriesPayload.summary ?? {
-        totalLogs: entries.length,
-        totalMiles: 0,
-        totalPayout: 0,
-        totalTips: 0,
+      const payload = (await response.json()) as {
+        dashboard: DashboardApiResult;
       };
+      const { dashboard } = payload;
 
       return {
-        firstName: getFirstName(user.name),
-        monthlyPlatformBreakdown,
-        monthlyPlatformTotal,
-        recentEntries,
-        stats: {
-          totalDeliveries: summary.totalLogs,
-          totalEarnings: summary.totalPayout,
-          totalExpenses: expensesPayload.summary?.totalExpenses ?? 0,
-          totalMiles: summary.totalMiles,
-          totalTips: summary.totalTips,
-        },
+        firstName: dashboard.user.firstName,
+        monthlyPlatformBreakdown: dashboard.monthlyPlatformBreakdown.map(
+          (platform) => ({
+            chartColorHex: platform.colorHex,
+            name: platform.name,
+            value: platform.value,
+          })
+        ),
+        monthlyPlatformTotal: dashboard.monthlyPlatformTotal,
+        recentEntries: dashboard.recentEntries,
+        stats: dashboard.stats,
       };
     },
     queryKey: ["dashboard-overview"],
@@ -777,7 +603,8 @@ function DashboardPage() {
                       <div className="flex min-w-0 items-center gap-2">
                         <div
                           className={`h-3 w-3 shrink-0 rounded-full border ${
-                            isNearBlack(platform.colorHex)
+                            platform.chartColorHex ===
+                            NEAR_BLACK_REPLACEMENT_COLOR
                               ? "border-white/40 ring-1 ring-white/30"
                               : "border-border/70"
                           }`}
