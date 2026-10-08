@@ -24,6 +24,8 @@ export interface AuthConfig {
   BETTER_AUTH_URL: string;
   BETTER_AUTH_SECRET: string;
   CORS_ORIGIN: string;
+  GOOGLE_CLIENT_ID: string;
+  GOOGLE_CLIENT_SECRET: string;
   POLAR_ACCESS_TOKEN: string;
   POLAR_SUCCESS_URL: string;
   polarProducts?: PolarCheckoutProduct[];

@@ -88,7 +88,7 @@ export const observabilityBindings = {
   ),
 };
 
-export const server = Cloudflare.Worker("server", {
+export const server = Cloudflare.Worker("gigstax-server", {
   compatibility: {
     flags: ["nodejs_compat"],
   },
@@ -98,17 +98,76 @@ export const server = Cloudflare.Worker("server", {
   env: {
     ...databaseBindings,
     ADMIN_EMAILS: Config.String("ADMIN_EMAILS").pipe(Config.withDefault("")),
+    AI_INPUT_COST_PER_1M: Config.String("AI_INPUT_COST_PER_1M").pipe(
+      Config.withDefault("")
+    ),
+    AI_OUTPUT_COST_PER_1M: Config.String("AI_OUTPUT_COST_PER_1M").pipe(
+      Config.withDefault("")
+    ),
     BETTER_AUTH_SECRET: Config.Redacted("BETTER_AUTH_SECRET"),
     BETTER_AUTH_URL: Cloudflare.Worker.URL,
+    BLOB_PRIVATE_READ_WRITE_TOKEN: Config.String(
+      "BLOB_PRIVATE_READ_WRITE_TOKEN"
+    ).pipe(Config.withDefault("")),
+    BLOB_READ_WRITE_TOKEN: Config.String("BLOB_READ_WRITE_TOKEN").pipe(
+      Config.withDefault("")
+    ),
     CORS_ORIGIN: Config.String("CORS_ORIGIN"),
+    CRON_SECRET: Config.String("CRON_SECRET").pipe(Config.withDefault("")),
+    EMAIL_UNSUBSCRIBE_SECRET: Config.String("EMAIL_UNSUBSCRIBE_SECRET").pipe(
+      Config.withDefault("")
+    ),
+    GOOGLE_CLIENT_ID: Config.String("GOOGLE_CLIENT_ID").pipe(
+      Config.withDefault("")
+    ),
+    GOOGLE_CLIENT_SECRET: Config.String("GOOGLE_CLIENT_SECRET").pipe(
+      Config.withDefault("")
+    ),
     GOOGLE_GENERATIVE_AI_API_KEY: Config.String(
       "GOOGLE_GENERATIVE_AI_API_KEY"
     ).pipe(Config.withDefault("")),
     MEDIA: mediaBucket,
+    NEXT_PUBLIC_APP_URL: Config.String("NEXT_PUBLIC_APP_URL").pipe(
+      Config.withDefault("")
+    ),
     NEXT_PUBLIC_RADAR_PUBLISHABLE_KEY: Config.String(
       "NEXT_PUBLIC_RADAR_PUBLISHABLE_KEY"
     ).pipe(Config.withDefault("")),
+    NEXT_PUBLIC_SITE_URL: Config.String("NEXT_PUBLIC_SITE_URL").pipe(
+      Config.withDefault("")
+    ),
     POLAR_ACCESS_TOKEN: Config.Redacted("POLAR_ACCESS_TOKEN"),
+    POLAR_AI_EXTRACT_METER_ID: Config.String("POLAR_AI_EXTRACT_METER_ID").pipe(
+      Config.withDefault("")
+    ),
+    POLAR_BULK_UPLOAD_METER_ID: Config.String(
+      "POLAR_BULK_UPLOAD_METER_ID"
+    ).pipe(Config.withDefault("")),
+    POLAR_DRIVER_MONTHLY_PRODUCT_ID: Config.String(
+      "POLAR_DRIVER_MONTHLY_PRODUCT_ID"
+    ).pipe(Config.withDefault("")),
+    POLAR_DRIVER_YEARLY_PRODUCT_ID: Config.String(
+      "POLAR_DRIVER_YEARLY_PRODUCT_ID"
+    ).pipe(Config.withDefault("")),
+    POLAR_ORGANIZATION_ID: Config.String("POLAR_ORGANIZATION_ID").pipe(
+      Config.withDefault("")
+    ),
+    POLAR_PRO_DRIVER_MONTHLY_PRODUCT_ID: Config.String(
+      "POLAR_PRO_DRIVER_MONTHLY_PRODUCT_ID"
+    ).pipe(Config.withDefault("")),
+    POLAR_PRO_DRIVER_YEARLY_PRODUCT_ID: Config.String(
+      "POLAR_PRO_DRIVER_YEARLY_PRODUCT_ID"
+    ).pipe(Config.withDefault("")),
+    POLAR_PRO_MONTHLY_PRODUCT_ID: Config.String(
+      "POLAR_PRO_MONTHLY_PRODUCT_ID"
+    ).pipe(Config.withDefault("")),
+    POLAR_PRO_YEARLY_PRODUCT_ID: Config.String(
+      "POLAR_PRO_YEARLY_PRODUCT_ID"
+    ).pipe(Config.withDefault("")),
+    POLAR_SERVER: Config.String("POLAR_SERVER").pipe(Config.withDefault("")),
+    POLAR_STARTER_MONTHLY_PRODUCT_ID: Config.String(
+      "POLAR_STARTER_MONTHLY_PRODUCT_ID"
+    ).pipe(Config.withDefault("")),
     POLAR_SUCCESS_URL: Config.String("POLAR_SUCCESS_URL"),
     PROCESS_EXTRACTION: processExtractionWorkflow,
     RADAR_SERVER_KEY: Config.String("RADAR_SERVER_KEY").pipe(
@@ -147,7 +206,7 @@ export default Alchemy.Stack(
   Effect.gen(function* () {
     const observabilityResources = yield* observability;
     const serverWorker = yield* server;
-    const webWorker = yield* Cloudflare.Website.Vite("web", {
+    const webWorker = yield* Cloudflare.Website.Vite("gigstax-web", {
       compatibility: {
         flags: ["nodejs_compat"],
       },
