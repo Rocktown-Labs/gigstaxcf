@@ -7,7 +7,8 @@
     "serve": "vite preview",
     "check-types": "vite build && tsc --noEmit",
     "dev:bare": "vite dev",
-    "env:generate": "varlock codegen"
+    "env:generate": "varlock codegen",
+    "test": "vitest run"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",
@@ -81,6 +82,7 @@
     "@gigstaxcf/config": "workspace:*",
     "@tanstack/react-router-devtools": "^1.167.1",
     "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "catalog:",
@@ -88,6 +90,7 @@
     "jsdom": "^30.0.1",
     "typescript": "^6.0.3",
     "vite": "^8.2.2",
+    "vitest": "^5.0.3",
     "web-vitals": "^6.2.1"
   }
 }
