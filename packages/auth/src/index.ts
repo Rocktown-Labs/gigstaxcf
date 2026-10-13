@@ -7,40 +7,56 @@ import { betterAuth } from "better-auth";
 
 import { createPolarClient } from "./lib/payments";
 
-export type AuthConfig = {
+export interface PolarCheckoutProduct {
+  productId: string;
+  slug: string;
+}
+
+export interface SendResetPasswordArgs {
+  url: string;
+  user: {
+    email: string;
+    name: string;
+  };
+}
+
+export interface AuthConfig {
   BETTER_AUTH_URL: string;
   BETTER_AUTH_SECRET: string;
   CORS_ORIGIN: string;
+  GOOGLE_CLIENT_ID: string;
+  GOOGLE_CLIENT_SECRET: string;
   POLAR_ACCESS_TOKEN: string;
   POLAR_SUCCESS_URL: string;
-};
+  polarProducts?: PolarCheckoutProduct[];
+  sendResetPasswordEmail?: (args: SendResetPasswordArgs) => Promise<void>;
+}
 
-export function createAuth(
+export interface CreateAuthOptions {
+  database: Database;
+  desktopOrigins?: readonly string[];
+}
+
+export const createAuth = (
   env: AuthConfig,
-  database: Database,
-  desktopOrigins: readonly string[] = [],
-) {
-  return betterAuth({
+  { database, desktopOrigins = [] }: CreateAuthOptions
+) =>
+  betterAuth({
+    advanced: {
+      defaultCookieAttributes: {
+        httpOnly: true,
+        sameSite: "none",
+        secure: true,
+      },
+    },
+    baseURL: env.BETTER_AUTH_URL,
     database: drizzleAdapter(database, {
       provider: "pg",
       schema,
     }),
-    trustedOrigins: [
-      env.CORS_ORIGIN,
-      ...desktopOrigins,
-      "gigstaxcf://",
-      "exp://",
-      "http://localhost:8081",
-    ],
-    emailAndPassword: { enabled: true },
-    secret: env.BETTER_AUTH_SECRET,
-    baseURL: env.BETTER_AUTH_URL,
-    advanced: {
-      defaultCookieAttributes: {
-        sameSite: "none",
-        secure: true,
-        httpOnly: true,
-      },
+    emailAndPassword: {
+      enabled: true,
+      sendResetPasswordEmail: env.sendResetPasswordEmail,
     },
     plugins: [
       polar({
@@ -48,16 +64,23 @@ export function createAuth(
         createCustomerOnSignUp: true,
         use: [
           checkout({
-            products: [{ productId: "your-product-id", slug: "pro" }],
-            successUrl: env.POLAR_SUCCESS_URL,
             authenticatedUsersOnly: true,
+            products: env.polarProducts ?? [],
+            successUrl: env.POLAR_SUCCESS_URL,
           }),
           portal(),
         ],
       }),
       expo(),
     ],
+    secret: env.BETTER_AUTH_SECRET,
+    trustedOrigins: [
+      env.CORS_ORIGIN,
+      ...desktopOrigins,
+      "gigstaxcf://",
+      "exp://",
+      "http://localhost:8081",
+    ],
   });
-}
 
 export type Session = ReturnType<typeof createAuth>["$Infer"]["Session"];

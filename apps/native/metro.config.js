@@ -1,7 +1,11 @@
-const { withVarlockMetroConfig } = require("@varlock/expo-integration/metro-config");
+const {
+  withVarlockMetroConfig,
+} = require("@varlock/expo-integration/metro-config");
 const { getDefaultConfig } = require("expo/metro-config");
 const { withUniwindConfig } = require("uniwind/metro");
-const { wrapWithReanimatedMetroConfig } = require("react-native-reanimated/metro-config");
+const {
+  wrapWithReanimatedMetroConfig,
+} = require("react-native-reanimated/metro-config");
 
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname);

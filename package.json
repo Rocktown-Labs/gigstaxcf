@@ -29,6 +29,7 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "check-types": "turbo run check-types",
+    "test": "turbo run test",
     "dev:native": "turbo run dev -F native --",
     "db:push": "turbo run db:push -F @gigstaxcf/db --",
     "db:studio": "turbo run db:studio -F @gigstaxcf/db --",
